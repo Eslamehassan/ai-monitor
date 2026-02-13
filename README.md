@@ -19,7 +19,7 @@ Runs entirely on your machine — no external services required.
 ./run.sh
 ```
 
-Dashboard: **http://localhost:6820**
+Dashboard: **http://localhost:6821**
 
 ## Install as Background Service
 
@@ -70,7 +70,7 @@ Uninstall: same command with `-Action uninstall`
 ## Architecture
 
 ```
-Claude Code hooks ──POST JSON──▶ FastAPI (:6820) ──▶ SQLite (WAL)
+Claude Code hooks ──POST JSON──▶ FastAPI (:6821) ──▶ SQLite (WAL)
                                       │                    │
 Transcript .jsonl ──watchdog──────────┘                    │
                                                            ▼
@@ -80,7 +80,7 @@ Transcript .jsonl ──watchdog──────────┘               
 
 - **Backend**: Python, FastAPI, SQLite (WAL mode), Watchdog, APScheduler
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, Recharts
-- **Hooks**: Bash scripts that POST JSON to `localhost:6820/api/events`
+- **Hooks**: Bash scripts that POST JSON to `localhost:6821/api/events`
 
 ## API
 
@@ -121,7 +121,7 @@ Install hooks into Claude Code:
 # Backend (auto-reloads not enabled by default)
 cd backend && uv run python -m ai_monitor
 
-# Frontend dev server (Vite with API proxy to :6820)
+# Frontend dev server (Vite with API proxy to :6821)
 cd frontend && bun run dev
 
 # Build frontend for production
@@ -137,7 +137,7 @@ Copy `.env.example` to `.env` and edit:
 
 | Variable | Default | Description |
 |---|---|---|
-| `AI_MONITOR_PORT` | `6820` | Server port |
+| `AI_MONITOR_PORT` | `6821` | Server port |
 | `AI_MONITOR_HOST` | `0.0.0.0` | Bind address |
 | `AI_MONITOR_DB_PATH` | `./data/ai_monitor.db` | SQLite database path |
 | `CLAUDE_PROJECTS_DIR` | `~/.claude/projects` | Transcript directory to watch |

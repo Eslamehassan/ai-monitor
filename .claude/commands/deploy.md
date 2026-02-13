@@ -34,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File services\windows\install-service.ps1 -A
 
 5. Verify the server is running:
 ```bash
-curl -s http://localhost:6820/api/health
+curl -s http://localhost:6821/api/health
 ```
 
-6. Tell the user the dashboard is available at http://localhost:6820
+6. Tell the user the dashboard is available at http://localhost:6821

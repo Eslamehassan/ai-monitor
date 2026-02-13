@@ -35,7 +35,7 @@ Follow these steps to set up the AI Monitor from scratch:
    ```
 
 6. **Open dashboard:**
-   Navigate to http://localhost:6820
+   Navigate to http://localhost:6821
 
 ## Development
 

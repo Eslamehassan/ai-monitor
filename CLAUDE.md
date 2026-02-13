@@ -17,7 +17,7 @@ uv run pytest -v                     # Run tests
 ```bash
 cd frontend
 bun install                          # Install deps
-bun run dev                          # Vite dev server (proxies /api to :6820)
+bun run dev                          # Vite dev server (proxies /api to :6821)
 bun run build                        # Build to ../backend/static/
 ```
 

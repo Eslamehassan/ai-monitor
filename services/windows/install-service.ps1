@@ -45,7 +45,7 @@ uv run python -m ai_monitor
         & nssm set $ServiceName AppDirectory $InstallDir
         & nssm set $ServiceName AppStdout (Join-Path $LogDir "ai-monitor.log")
         & nssm set $ServiceName AppStderr (Join-Path $LogDir "ai-monitor.err")
-        & nssm set $ServiceName AppEnvironmentExtra "AI_MONITOR_PORT=6820"
+        & nssm set $ServiceName AppEnvironmentExtra "AI_MONITOR_PORT=6821"
         & nssm set $ServiceName AppRestartDelay 5000
         Write-Host "Service installed with NSSM. Start with: nssm start $ServiceName"
     }

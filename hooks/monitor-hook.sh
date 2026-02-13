@@ -2,7 +2,7 @@
 # Claude Code hook - sends event data to the AI Monitor backend.
 # Reads JSON from stdin and POSTs it to the local API.
 
-AI_MONITOR_URL="${AI_MONITOR_URL:-http://localhost:6820}"
+AI_MONITOR_URL="${AI_MONITOR_URL:-http://localhost:6821}"
 
 # Read JSON payload from stdin
 payload=$(cat)

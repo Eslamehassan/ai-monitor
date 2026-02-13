@@ -13,7 +13,7 @@ Read these files to understand the AI Monitor project:
 11. `frontend/src/App.tsx` — React router: Dashboard (/), Sessions (/sessions), Projects (/projects)
 12. `frontend/src/lib/api.ts` — TypeScript API client with typed interfaces
 13. `frontend/src/pages/Dashboard.tsx` — KPI cards + Recharts (traffic, tokens, tool calls, errors)
-14. `hooks/monitor-hook.sh` — Bash hook that reads JSON from stdin and POSTs to localhost:6820
+14. `hooks/monitor-hook.sh` — Bash hook that reads JSON from stdin and POSTs to localhost:6821
 
 ## Architecture
 
@@ -38,4 +38,4 @@ Local AI monitoring dashboard for Claude Code sessions. Inspired by Sentry AI.
 
 **Database tables:** projects, sessions (with token counts + cost), tool_calls (pending/success/error), agents
 
-**Environment:** `.env` with AI_MONITOR_PORT (6820), AI_MONITOR_HOST, AI_MONITOR_DB_PATH, CLAUDE_PROJECTS_DIR
+**Environment:** `.env` with AI_MONITOR_PORT (6821), AI_MONITOR_HOST, AI_MONITOR_DB_PATH, CLAUDE_PROJECTS_DIR

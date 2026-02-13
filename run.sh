@@ -21,5 +21,5 @@ if [ ! -f "static/index.html" ]; then
     cd "$SCRIPT_DIR/backend"
 fi
 
-echo "Starting AI Monitor on http://localhost:${AI_MONITOR_PORT:-6820}"
+echo "Starting AI Monitor on http://localhost:${AI_MONITOR_PORT:-6821}"
 exec uv run python -m ai_monitor
