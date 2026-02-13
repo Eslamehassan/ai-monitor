@@ -1,0 +1,16 @@
+[Unit]
+Description=AI Monitor - Claude Code Session Monitor
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=__INSTALL_DIR__/run.sh
+Restart=on-failure
+RestartSec=5
+Environment=AI_MONITOR_PORT=6820
+StandardOutput=append:__INSTALL_DIR__/logs/ai-monitor.log
+StandardError=append:__INSTALL_DIR__/logs/ai-monitor.err
+
+[Install]
+WantedBy=default.target
