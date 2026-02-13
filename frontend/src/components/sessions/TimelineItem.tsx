@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge.tsx";
 import {
   CheckCircle2,
@@ -12,7 +11,6 @@ import {
 } from "lucide-react";
 import type { TimelineEvent } from "@/lib/api.ts";
 import { relativeTime } from "@/lib/utils.ts";
-import { ToolCallDetail } from "./ToolCallDetail.tsx";
 
 type ToolCategory = "file" | "search" | "execution" | "other";
 
@@ -70,15 +68,18 @@ function getCategory(toolName: string): ToolCategory {
 interface Props {
   event: TimelineEvent;
   isLast: boolean;
+  selected: boolean;
+  onSelect: () => void;
 }
 
-export function TimelineItem({ event, isLast }: Props) {
-  const [expanded, setExpanded] = useState(false);
-
+export function TimelineItem({ event, isLast, selected, onSelect }: Props) {
   if (event.type === "agent" && event.agent) {
     const agent = event.agent;
     return (
-      <div className="flex gap-3">
+      <div
+        className={`flex gap-3 cursor-pointer rounded-md px-1 transition-colors ${selected ? "ring-1 ring-primary bg-muted/30" : "hover:bg-muted/20"}`}
+        onClick={onSelect}
+      >
         {/* Timeline connector */}
         <div className="flex flex-col items-center">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
@@ -128,8 +129,8 @@ export function TimelineItem({ event, isLast }: Props) {
         {/* Content */}
         <div className="flex-1 pb-4">
           <div
-            className="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 -ml-2 hover:bg-muted/50"
-            onClick={() => setExpanded(!expanded)}
+            className={`flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 -ml-2 transition-colors ${selected ? "ring-1 ring-primary bg-muted/30" : "hover:bg-muted/50"}`}
+            onClick={onSelect}
           >
             <span className="font-mono text-xs font-medium">{tc.tool_name}</span>
             <Badge
@@ -153,12 +154,11 @@ export function TimelineItem({ event, isLast }: Props) {
               <span>{relativeTime(tc.started_at)}</span>
             </div>
           </div>
-          {tc.error && !expanded && (
+          {tc.error && (
             <p className="mt-0.5 text-[11px] text-red-400 truncate pl-2">
               {tc.error}
             </p>
           )}
-          {expanded && <ToolCallDetail toolCall={tc} />}
         </div>
       </div>
     );

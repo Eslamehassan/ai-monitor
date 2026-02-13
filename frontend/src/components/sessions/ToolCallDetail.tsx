@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge.tsx";
-import { CheckCircle2, XCircle, Clock, Copy, Check } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Copy, Check, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import type { ToolCall } from "@/lib/api.ts";
 import { relativeTime } from "@/lib/utils.ts";
+import { getToolRenderer } from "./toolRenderers.tsx";
 
 interface Props {
   toolCall: ToolCall;
@@ -55,10 +56,14 @@ function JsonBlock({ label, data }: { label: string; data: unknown }) {
 }
 
 export function ToolCallDetail({ toolCall: tc }: Props) {
+  const [showRaw, setShowRaw] = useState(false);
+  const Renderer = getToolRenderer(tc.tool_name);
+
   return (
-    <div className="space-y-3 pl-8 pr-2 pb-3" onClick={(e) => e.stopPropagation()}>
+    <div className="space-y-3">
       {/* Metadata row */}
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <span className="font-mono font-medium text-foreground">{tc.tool_name}</span>
         {tc.status !== "error" ? (
           <Badge variant="secondary" className="gap-1 text-[10px]">
             <CheckCircle2 className="h-3 w-3 text-emerald-500" />
@@ -86,9 +91,28 @@ export function ToolCallDetail({ toolCall: tc }: Props) {
         </div>
       )}
 
-      {/* Input / Response */}
-      {tc.tool_input != null && <JsonBlock label="Input" data={tc.tool_input} />}
-      {tc.tool_response != null && <JsonBlock label="Response" data={tc.tool_response} />}
+      {/* Formatted or Raw view */}
+      {showRaw ? (
+        <div className="space-y-3">
+          {tc.tool_input != null && <JsonBlock label="Input" data={tc.tool_input} />}
+          {tc.tool_response != null && <JsonBlock label="Response" data={tc.tool_response} />}
+        </div>
+      ) : (
+        <Renderer input={tc.tool_input} response={tc.tool_response} />
+      )}
+
+      {/* View Raw toggle */}
+      <div className="pt-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 gap-1.5 text-[10px] text-muted-foreground"
+          onClick={() => setShowRaw(!showRaw)}
+        >
+          <Code2 className="h-3 w-3" />
+          {showRaw ? "Formatted View" : "View Raw JSON"}
+        </Button>
+      </div>
     </div>
   );
 }

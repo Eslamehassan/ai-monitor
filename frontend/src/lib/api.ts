@@ -51,9 +51,18 @@ export interface Agent {
   session_id: string;
   agent_name: string | null;
   agent_type: string | null;
+  task_tool_call_id: number | null;
   status: string;
   started_at: string | null;
   ended_at: string | null;
+}
+
+export interface AgentDetail extends Agent {
+  task_prompt: string | null;
+  task_description: string | null;
+  task_config: { subagent_type?: string; model?: string; mode?: string; name?: string } | null;
+  subagent_tools: ToolCall[];
+  task_response: unknown;
 }
 
 export interface Project {
@@ -151,4 +160,8 @@ export async function fetchToolStats(): Promise<ToolStats[]> {
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   return fetchJson<DashboardStats>("/dashboard/stats");
+}
+
+export async function fetchAgentDetail(sessionId: string, agentId: number): Promise<AgentDetail> {
+  return fetchJson<AgentDetail>(`/sessions/${sessionId}/agents/${agentId}`);
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import {
@@ -14,7 +14,7 @@ import {
   Zap,
   Search,
 } from "lucide-react";
-import type { SessionDetail as SessionDetailType, TimelineEvent } from "@/lib/api.ts";
+import type { SessionDetail as SessionDetailType, TimelineEvent, ToolCall } from "@/lib/api.ts";
 import { fetchTimeline } from "@/lib/api.ts";
 import {
   formatTokens,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils.ts";
 import { usePollingData } from "@/hooks/useAutoRefresh.ts";
 import { TimelineItem } from "./TimelineItem.tsx";
+import { DetailPanel } from "./DetailPanel.tsx";
 
 interface Props {
   session: SessionDetailType;
@@ -32,6 +33,7 @@ interface Props {
 
 export function SessionDetail({ session, onBack }: Props) {
   const [timelineFilter, setTimelineFilter] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
 
   const { data: timeline } = usePollingData<TimelineEvent[]>(
     () => fetchTimeline(session.session_id),
@@ -55,6 +57,27 @@ export function SessionDetail({ session, onBack }: Props) {
       return false;
     });
   }, [timeline, timelineFilter]);
+
+  const handleToolSelect = useCallback((tc: ToolCall) => {
+    // Find the timeline event matching this tool call and select it
+    const ev = timeline?.find(
+      (e) => e.type === "tool_call" && e.tool_call?.id === tc.id
+    );
+    if (ev) {
+      setSelectedEvent(ev);
+    } else {
+      // If not in timeline (subagent tool), create a synthetic event
+      setSelectedEvent({ type: "tool_call", timestamp: tc.started_at, tool_call: tc, agent: null });
+    }
+  }, [timeline]);
+
+  const isSelected = (ev: TimelineEvent) => {
+    if (!selectedEvent) return false;
+    if (ev.type !== selectedEvent.type) return false;
+    if (ev.type === "tool_call") return ev.tool_call?.id === selectedEvent.tool_call?.id;
+    if (ev.type === "agent") return ev.agent?.id === selectedEvent.agent?.id;
+    return false;
+  };
 
   return (
     <div className="space-y-6">
@@ -125,25 +148,40 @@ export function SessionDetail({ session, onBack }: Props) {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
-                {filteredTimeline.length === 0 ? (
-                  <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                    {timeline && timeline.length > 0
-                      ? "No matching events"
-                      : "No timeline events recorded"}
-                  </div>
-                ) : (
-                  <div className="space-y-0">
-                    {filteredTimeline.map((ev, i) => (
-                      <TimelineItem
-                        key={i}
-                        event={ev}
-                        isLast={i === filteredTimeline.length - 1}
-                      />
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
+              <div className="flex gap-4 h-[600px]">
+                {/* Timeline list (left pane) */}
+                <div className="w-[45%] overflow-hidden flex flex-col border-r border-border pr-4">
+                  <ScrollArea className="h-full">
+                    {filteredTimeline.length === 0 ? (
+                      <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+                        {timeline && timeline.length > 0
+                          ? "No matching events"
+                          : "No timeline events recorded"}
+                      </div>
+                    ) : (
+                      <div className="space-y-0">
+                        {filteredTimeline.map((ev, i) => (
+                          <TimelineItem
+                            key={ev.type === "tool_call" ? `tc-${ev.tool_call?.id ?? i}` : `ag-${ev.agent?.id ?? i}`}
+                            event={ev}
+                            isLast={i === filteredTimeline.length - 1}
+                            selected={isSelected(ev)}
+                            onSelect={() => setSelectedEvent(ev)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </div>
+                {/* Detail panel (right pane) */}
+                <div className="w-[55%] overflow-hidden flex flex-col">
+                  <DetailPanel
+                    event={selectedEvent}
+                    sessionId={session.session_id}
+                    onToolSelect={handleToolSelect}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
