@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS agents (
     session_id TEXT NOT NULL,
     agent_name TEXT,
     agent_type TEXT,
+    task_tool_call_id INTEGER REFERENCES tool_calls(id),
     status TEXT NOT NULL DEFAULT 'active',
     started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     ended_at TEXT
@@ -82,6 +83,14 @@ def get_db() -> sqlite3.Connection:
             "CREATE INDEX IF NOT EXISTS idx_sessions_last_event_at ON sessions(last_event_at)"
         )
         _connection.commit()
+        # Migrate: add task_tool_call_id column to agents for existing databases
+        try:
+            _connection.execute(
+                "ALTER TABLE agents ADD COLUMN task_tool_call_id INTEGER REFERENCES tool_calls(id)"
+            )
+            _connection.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         # Migrate existing timestamps to ISO 8601 UTC format
         for table, cols in [
             ("projects", ["created_at"]),

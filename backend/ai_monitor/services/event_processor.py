@@ -183,11 +183,25 @@ def _handle_stop(event: HookEvent) -> None:
 
 def _handle_subagent_start(event: HookEvent) -> None:
     db = get_db()
-    db.execute(
+    cur = db.execute(
         """INSERT INTO agents (session_id, agent_name, agent_type, status, started_at)
            VALUES (?, ?, ?, 'active', ?)""",
         (event.session_id, event.agent_name, event.agent_type, _now()),
     )
+    agent_id = cur.lastrowid
+
+    # Link to the most recent pending Task tool call in this session
+    task_row = db.execute(
+        """SELECT id FROM tool_calls
+           WHERE session_id = ? AND tool_name = 'Task' AND status = 'pending'
+           ORDER BY id DESC LIMIT 1""",
+        (event.session_id,),
+    ).fetchone()
+    if task_row:
+        db.execute(
+            "UPDATE agents SET task_tool_call_id = ? WHERE id = ?",
+            (task_row["id"], agent_id),
+        )
     db.commit()
 
 

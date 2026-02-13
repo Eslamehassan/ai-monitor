@@ -81,9 +81,18 @@ class Agent(BaseModel):
     session_id: str
     agent_name: str | None = None
     agent_type: str | None = None
+    task_tool_call_id: int | None = None
     status: str = "active"
     started_at: str | None = None
     ended_at: str | None = None
+
+
+class AgentDetail(Agent):
+    task_prompt: str | None = None
+    task_description: str | None = None
+    task_config: dict[str, Any] | None = None
+    subagent_tools: list["ToolCall"] = Field(default_factory=list)
+    task_response: Any | None = None
 
 
 # ── API response models ───────────────────────────────────────────
