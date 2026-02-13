@@ -71,10 +71,10 @@ const columns: ColumnDef<Session>[] = [
     ),
   },
   {
-    accessorKey: "project",
+    accessorKey: "project_name",
     header: "Project",
     cell: ({ getValue }) => (
-      <span className="text-xs">{getValue<string>()}</span>
+      <span className="text-xs">{getValue<string>() ?? "-"}</span>
     ),
   },
   {
@@ -85,22 +85,15 @@ const columns: ColumnDef<Session>[] = [
     ),
   },
   {
-    accessorKey: "duration_seconds",
-    header: "Duration",
-    cell: ({ getValue }) => (
-      <span className="text-xs">{formatDuration(getValue<number>())}</span>
-    ),
-  },
-  {
     id: "tokens",
     header: "Tokens",
-    accessorFn: (row) => row.tokens_in + row.tokens_out,
+    accessorFn: (row) => row.input_tokens + row.output_tokens,
     cell: ({ getValue }) => (
       <span className="text-xs">{formatTokens(getValue<number>())}</span>
     ),
   },
   {
-    accessorKey: "total_cost",
+    accessorKey: "estimated_cost",
     header: "Cost",
     cell: ({ getValue }) => (
       <span className="text-xs font-medium">{formatCost(getValue<number>())}</span>

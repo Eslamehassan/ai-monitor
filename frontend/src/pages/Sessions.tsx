@@ -4,7 +4,7 @@ import { SessionList } from "@/components/sessions/SessionList.tsx";
 import { SessionDetail } from "@/components/sessions/SessionDetail.tsx";
 import { usePollingData } from "@/hooks/useAutoRefresh.ts";
 import { fetchSessions, fetchSession } from "@/lib/api.ts";
-import type { Session } from "@/lib/api.ts";
+import type { Session, SessionDetail as SessionDetailType } from "@/lib/api.ts";
 
 export default function Sessions() {
   const { id } = useParams<{ id: string }>();
@@ -15,8 +15,8 @@ export default function Sessions() {
     []
   );
 
-  const { data: detail } = usePollingData<Session>(
-    () => (selectedId ? fetchSession(selectedId) : Promise.resolve(null as unknown as Session)),
+  const { data: detail } = usePollingData<SessionDetailType>(
+    () => (selectedId ? fetchSession(selectedId) : Promise.resolve(null as unknown as SessionDetailType)),
     [selectedId]
   );
 

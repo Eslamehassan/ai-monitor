@@ -4,7 +4,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
 import { Activity, DollarSign, Zap, Clock } from "lucide-react";
 import { usePollingData } from "@/hooks/useAutoRefresh.ts";
 import { fetchDashboardStats, fetchToolStats, fetchSessions } from "@/lib/api.ts";
@@ -18,11 +17,14 @@ import { IssuesTable } from "@/components/dashboard/IssuesTable.tsx";
 const emptyStats: DashboardStats = {
   total_sessions: 0,
   active_sessions: 0,
+  total_tool_calls: 0,
+  total_input_tokens: 0,
+  total_output_tokens: 0,
   total_cost: 0,
-  total_tokens: 0,
+  tool_distribution: [],
+  recent_sessions: [],
   sessions_over_time: [],
   tokens_over_time: [],
-  cost_trend: [],
   recent_errors: [],
 };
 
@@ -51,7 +53,7 @@ export default function Dashboard() {
         />
         <KpiCard
           title="Total Tokens"
-          value={formatTokens(s.total_tokens)}
+          value={formatTokens(s.total_input_tokens + s.total_output_tokens)}
           sub="input + output"
           icon={<Zap className="h-4 w-4" />}
         />
@@ -71,14 +73,14 @@ export default function Dashboard() {
 
       {/* Charts Row */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <TrafficChart data={s.sessions_over_time} />
-        <TokensChart data={s.tokens_over_time} />
+        <TrafficChart data={s.sessions_over_time ?? []} />
+        <TokensChart data={s.tokens_over_time ?? []} />
       </div>
 
       {/* Tool Usage + Recent Errors */}
       <div className="grid gap-4 lg:grid-cols-2">
         <ToolCallsChart data={toolStats ?? []} />
-        <IssuesTable data={s.recent_errors} />
+        <IssuesTable data={s.recent_errors ?? []} />
       </div>
     </div>
   );

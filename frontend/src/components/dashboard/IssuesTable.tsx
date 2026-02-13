@@ -44,8 +44,8 @@ export function IssuesTable({ data }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.slice(0, 20).map((tc) => (
-                  <TableRow key={tc.id}>
+                {data.slice(0, 20).map((tc, i) => (
+                  <TableRow key={tc.id ?? i}>
                     <TableCell className="text-xs font-mono">
                       {tc.tool_name}
                     </TableCell>
@@ -54,11 +54,11 @@ export function IssuesTable({ data }: Props) {
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-xs">
                       <Badge variant="destructive" className="text-[10px]">
-                        {tc.error_message ?? "Unknown error"}
+                        {tc.error ?? "Unknown error"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-right text-muted-foreground">
-                      {relativeTime(tc.timestamp)}
+                      {relativeTime(tc.started_at)}
                     </TableCell>
                   </TableRow>
                 ))}

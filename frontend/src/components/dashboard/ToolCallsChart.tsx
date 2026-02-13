@@ -31,7 +31,7 @@ const COLORS = [
 ];
 
 export function ToolCallsChart({ data }: Props) {
-  const sorted = [...data].sort((a, b) => b.call_count - a.call_count).slice(0, 10);
+  const sorted = [...data].sort((a, b) => b.count - a.count).slice(0, 10);
 
   return (
     <Card>
@@ -71,7 +71,7 @@ export function ToolCallsChart({ data }: Props) {
                   }}
                   formatter={(value: number) => [value, "Calls"]}
                 />
-                <Bar dataKey="call_count" radius={[0, 4, 4, 0]} name="Calls">
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} name="Calls">
                   {sorted.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}

@@ -16,16 +16,15 @@ import {
   Clock,
   Zap,
 } from "lucide-react";
-import type { Session } from "@/lib/api.ts";
+import type { SessionDetail as SessionDetailType } from "@/lib/api.ts";
 import {
-  formatDuration,
   formatTokens,
   formatCost,
   relativeTime,
 } from "@/lib/utils.ts";
 
 interface Props {
-  session: Session;
+  session: SessionDetailType;
   onBack: () => void;
 }
 
@@ -53,7 +52,7 @@ export function SessionDetail({ session, onBack }: Props) {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {session.project} &middot; {session.model} &middot;{" "}
+            {session.project_name ?? "Unknown"} &middot; {session.model ?? "-"} &middot;{" "}
             {relativeTime(session.started_at)}
           </p>
         </div>
@@ -61,10 +60,10 @@ export function SessionDetail({ session, onBack }: Props) {
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Duration" value={formatDuration(session.duration_seconds)} />
-        <StatCard label="Tokens In" value={formatTokens(session.tokens_in)} />
-        <StatCard label="Tokens Out" value={formatTokens(session.tokens_out)} />
-        <StatCard label="Cost" value={formatCost(session.total_cost)} />
+        <StatCard label="Tokens In" value={formatTokens(session.input_tokens)} />
+        <StatCard label="Tokens Out" value={formatTokens(session.output_tokens)} />
+        <StatCard label="Cost" value={formatCost(session.estimated_cost)} />
+        <StatCard label="Tool Calls" value={String(session.tool_call_count)} />
       </div>
 
       {/* Tabs */}
@@ -96,7 +95,7 @@ export function SessionDetail({ session, onBack }: Props) {
                     {session.tool_calls.map((tc, i) => (
                       <div key={tc.id ?? i}>
                         <div className="flex items-center gap-3 py-2 px-2 rounded hover:bg-muted/30">
-                          {tc.success ? (
+                          {tc.status !== "error" ? (
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
                           ) : (
                             <XCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -105,9 +104,9 @@ export function SessionDetail({ session, onBack }: Props) {
                             <p className="text-xs font-mono font-medium">
                               {tc.tool_name}
                             </p>
-                            {tc.error_message && (
+                            {tc.error && (
                               <p className="mt-0.5 text-[11px] text-red-400 truncate">
-                                {tc.error_message}
+                                {tc.error}
                               </p>
                             )}
                           </div>
@@ -118,7 +117,7 @@ export function SessionDetail({ session, onBack }: Props) {
                                 {tc.duration_ms}ms
                               </span>
                             )}
-                            <span>{relativeTime(tc.timestamp)}</span>
+                            <span>{relativeTime(tc.started_at)}</span>
                           </div>
                         </div>
                         {i < session.tool_calls.length - 1 && (
@@ -156,7 +155,7 @@ export function SessionDetail({ session, onBack }: Props) {
                         <div className="flex items-center gap-2">
                           <Zap className="h-4 w-4 text-chart-1" />
                           <span className="text-sm font-medium">
-                            {agent.agent_name}
+                            {agent.agent_name ?? "Unknown Agent"}
                           </span>
                         </div>
                         <Badge variant={agent.ended_at ? "secondary" : "default"}>
@@ -164,8 +163,7 @@ export function SessionDetail({ session, onBack }: Props) {
                         </Badge>
                       </div>
                       <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-                        <span>In: {formatTokens(agent.tokens_in)}</span>
-                        <span>Out: {formatTokens(agent.tokens_out)}</span>
+                        {agent.agent_type && <span>Type: {agent.agent_type}</span>}
                         <span>{relativeTime(agent.started_at)}</span>
                       </div>
                     </div>

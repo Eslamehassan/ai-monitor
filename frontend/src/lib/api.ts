@@ -8,75 +8,103 @@ async function fetchJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// ── Models (aligned to backend Pydantic models) ─────────────────
+
 export interface Session {
+  id: number | null;
   session_id: string;
-  project: string;
-  model: string;
-  status: "active" | "completed" | "error";
-  started_at: string;
+  project_id: number | null;
+  project_name: string | null;
+  status: string;
+  model: string | null;
+  started_at: string | null;
   ended_at: string | null;
-  duration_seconds: number | null;
-  tokens_in: number;
-  tokens_out: number;
-  total_cost: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  estimated_cost: number;
+  tool_call_count: number;
+}
+
+export interface SessionDetail extends Session {
   tool_calls: ToolCall[];
   agents: Agent[];
 }
 
 export interface ToolCall {
-  id: number;
+  id: number | null;
   session_id: string;
   tool_name: string;
-  timestamp: string;
+  tool_input: unknown;
+  tool_response: unknown;
+  status: string;
+  error: string | null;
+  started_at: string | null;
+  ended_at: string | null;
   duration_ms: number | null;
-  success: boolean;
-  error_message: string | null;
 }
 
 export interface Agent {
-  id: number;
+  id: number | null;
   session_id: string;
-  agent_name: string;
-  started_at: string;
+  agent_name: string | null;
+  agent_type: string | null;
+  status: string;
+  started_at: string | null;
   ended_at: string | null;
-  tokens_in: number;
-  tokens_out: number;
 }
 
 export interface Project {
-  project: string;
+  id: number | null;
+  name: string;
+  path: string;
+  created_at: string | null;
   session_count: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
   total_cost: number;
-  total_tokens_in: number;
-  total_tokens_out: number;
-  last_active: string;
+  last_active: string | null;
 }
 
 export interface ToolStats {
   tool_name: string;
-  call_count: number;
-  avg_duration_ms: number;
-  success_rate: number;
+  count: number;
   error_count: number;
+  error_rate: number;
+  avg_duration_ms: number | null;
 }
 
 export interface DashboardStats {
   total_sessions: number;
   active_sessions: number;
+  total_tool_calls: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
   total_cost: number;
-  total_tokens: number;
+  tool_distribution: ToolStats[];
+  recent_sessions: Session[];
   sessions_over_time: { date: string; count: number }[];
   tokens_over_time: { date: string; tokens_in: number; tokens_out: number }[];
-  cost_trend: { date: string; cost: number }[];
   recent_errors: ToolCall[];
 }
 
-export async function fetchSessions(): Promise<Session[]> {
-  return fetchJson<Session[]>("/sessions");
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
-export async function fetchSession(id: string): Promise<Session> {
-  return fetchJson<Session>(`/sessions/${id}`);
+// ── Fetchers ────────────────────────────────────────────────────
+
+export async function fetchSessions(): Promise<Session[]> {
+  const res = await fetchJson<PaginatedResponse<Session>>("/sessions");
+  return res.items;
+}
+
+export async function fetchSession(id: string): Promise<SessionDetail> {
+  return fetchJson<SessionDetail>(`/sessions/${id}`);
 }
 
 export async function fetchProjects(): Promise<Project[]> {

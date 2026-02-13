@@ -4,7 +4,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
 import { FolderKanban } from "lucide-react";
 import { usePollingData } from "@/hooks/useAutoRefresh.ts";
 import { fetchProjects } from "@/lib/api.ts";
@@ -36,7 +35,7 @@ export default function Projects() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {projects.map((project) => (
-        <ProjectCard key={project.project} project={project} />
+        <ProjectCard key={project.id ?? project.name} project={project} />
       ))}
     </div>
   );
@@ -50,7 +49,7 @@ function ProjectCard({ project }: { project: Project }) {
           <FolderKanban className="h-4 w-4 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <CardTitle className="truncate text-sm">{project.project}</CardTitle>
+          <CardTitle className="truncate text-sm">{project.name}</CardTitle>
           <p className="text-xs text-muted-foreground">
             {relativeTime(project.last_active)}
           </p>
@@ -69,13 +68,13 @@ function ProjectCard({ project }: { project: Project }) {
           <div>
             <p className="text-muted-foreground">Tokens In</p>
             <p className="mt-0.5 font-medium">
-              {formatTokens(project.total_tokens_in)}
+              {formatTokens(project.total_input_tokens)}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">Tokens Out</p>
             <p className="mt-0.5 font-medium">
-              {formatTokens(project.total_tokens_out)}
+              {formatTokens(project.total_output_tokens)}
             </p>
           </div>
         </div>
