@@ -56,3 +56,32 @@ export function truncateId(id: string, len = 8): string {
   if (id.length <= len) return id;
   return id.slice(0, len) + "...";
 }
+
+/**
+ * Format a timestamp as an offset from a session start time.
+ * Returns "+0:00", "+1:30", "+1:05:12" etc.
+ */
+export function formatSessionOffset(
+  timestamp: string | null | undefined,
+  sessionStart: string | null | undefined
+): string {
+  if (!timestamp || !sessionStart) return "-";
+  const normalize = (s: string) => {
+    let n = s;
+    if (!n.endsWith("Z") && !n.includes("+")) n = n.replace(" ", "T") + "Z";
+    return n;
+  };
+  const ts = new Date(normalize(timestamp)).getTime();
+  const start = new Date(normalize(sessionStart)).getTime();
+  const diffSec = Math.max(0, Math.floor((ts - start) / 1000));
+
+  if (diffSec < 3600) {
+    const m = Math.floor(diffSec / 60);
+    const s = diffSec % 60;
+    return `+${m}:${String(s).padStart(2, "0")}`;
+  }
+  const h = Math.floor(diffSec / 3600);
+  const m = Math.floor((diffSec % 3600) / 60);
+  const s = diffSec % 60;
+  return `+${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
