@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -13,11 +14,22 @@ from fastapi.staticfiles import StaticFiles
 from ai_monitor.config import settings
 from ai_monitor.db import close_db, get_db
 from ai_monitor.routes import agents, dashboard, events, projects, sessions, tools
+from ai_monitor.services.session_reaper import reap_stale_sessions
 from ai_monitor.services.transcript_parser import scan_transcripts_dir
 from ai_monitor.watcher import start_watcher, stop_watcher
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+
+async def _reaper_loop() -> None:
+    """Run the stale session reaper every 30 seconds."""
+    try:
+        while True:
+            await asyncio.sleep(30)
+            reap_stale_sessions()
+    except asyncio.CancelledError:
+        pass
 
 
 @asynccontextmanager
@@ -28,9 +40,12 @@ async def lifespan(app: FastAPI):
     get_db()
     start_watcher()
     scan_transcripts_dir(settings.claude_projects_dir)
+    reaper_task = asyncio.create_task(_reaper_loop())
     logger.info("AI Monitor ready")
     yield
     # Shutdown
+    reaper_task.cancel()
+    await reaper_task
     stop_watcher()
     close_db()
     logger.info("AI Monitor stopped")

@@ -1,11 +1,13 @@
 """Step definitions for events.feature."""
 
 import time
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from pytest_bdd import given, when, then, scenarios, parsers
 
 from ai_monitor.db import get_db
+from ai_monitor.services.session_reaper import reap_stale_sessions
 
 scenarios("../features/events.feature")
 
@@ -122,3 +124,52 @@ def post_subagent_stop(client, session_id, agent):
         "agent_name": agent,
     })
     assert resp.status_code == 200
+
+
+@when(parsers.parse('I post a Stop event for session "{session_id}"'))
+def post_stop(client, session_id):
+    resp = client.post("/api/events", json={
+        "session_id": session_id,
+        "hook_event_name": "Stop",
+    })
+    assert resp.status_code == 200
+
+
+@then(parsers.parse('session "{session_id}" should have last_event_at set'))
+def session_has_last_event_at(session_id):
+    time.sleep(0.2)
+    db = get_db()
+    row = db.execute(
+        "SELECT last_event_at FROM sessions WHERE session_id = ?",
+        (session_id,),
+    ).fetchone()
+    assert row is not None, f"Session '{session_id}' not found"
+    assert row["last_event_at"] is not None, "last_event_at should be set"
+
+
+@given(parsers.parse('session "{session_id}" has last_event_at set to 15 minutes ago'))
+def session_last_event_stale(session_id):
+    db = get_db()
+    past = (datetime.now(timezone.utc) - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    db.execute(
+        "UPDATE sessions SET last_event_at = ? WHERE session_id = ?",
+        (past, session_id),
+    )
+    db.commit()
+
+
+@when("I run the stale session reaper")
+def run_reaper():
+    reap_stale_sessions()
+
+
+@then(parsers.parse('session "{session_id}" should have ended_at set'))
+def session_has_ended_at(session_id):
+    time.sleep(0.2)
+    db = get_db()
+    row = db.execute(
+        "SELECT ended_at FROM sessions WHERE session_id = ?",
+        (session_id,),
+    ).fetchone()
+    assert row is not None, f"Session '{session_id}' not found"
+    assert row["ended_at"] is not None, "ended_at should be set"

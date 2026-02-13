@@ -34,7 +34,13 @@ export function formatCost(cost: number | null | undefined): string {
 
 export function relativeTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
+  // Ensure UTC timestamps are parsed correctly: if no timezone
+  // indicator, treat as UTC by appending Z
+  let normalized = dateStr;
+  if (!normalized.endsWith("Z") && !normalized.includes("+")) {
+    normalized = normalized.replace(" ", "T") + "Z";
+  }
+  const date = new Date(normalized);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);

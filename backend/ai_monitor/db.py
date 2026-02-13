@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     path TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -21,8 +21,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     project_id INTEGER REFERENCES projects(id),
     status TEXT NOT NULL DEFAULT 'active',
     model TEXT,
-    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     ended_at TEXT,
+    last_event_at TEXT,
     input_tokens INTEGER NOT NULL DEFAULT 0,
     output_tokens INTEGER NOT NULL DEFAULT 0,
     cache_read_tokens INTEGER NOT NULL DEFAULT 0,
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS tool_calls (
     tool_response TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     error TEXT,
-    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     ended_at TEXT,
     duration_ms INTEGER
 );
@@ -49,7 +50,7 @@ CREATE TABLE IF NOT EXISTS agents (
     agent_name TEXT,
     agent_type TEXT,
     status TEXT NOT NULL DEFAULT 'active',
-    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     ended_at TEXT
 );
 
@@ -71,6 +72,28 @@ def get_db() -> sqlite3.Connection:
         _connection.execute("PRAGMA journal_mode=WAL")
         _connection.execute("PRAGMA busy_timeout=5000")
         _connection.executescript(SCHEMA)
+        # Migrate: add last_event_at column for existing databases
+        try:
+            _connection.execute("ALTER TABLE sessions ADD COLUMN last_event_at TEXT")
+            _connection.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        _connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_sessions_last_event_at ON sessions(last_event_at)"
+        )
+        _connection.commit()
+        # Migrate existing timestamps to ISO 8601 UTC format
+        for table, cols in [
+            ("projects", ["created_at"]),
+            ("sessions", ["started_at", "ended_at"]),
+            ("tool_calls", ["started_at", "ended_at"]),
+            ("agents", ["started_at", "ended_at"]),
+        ]:
+            for col in cols:
+                _connection.execute(
+                    f"UPDATE {table} SET {col} = REPLACE({col}, ' ', 'T') || 'Z' "
+                    f"WHERE {col} IS NOT NULL AND {col} NOT LIKE '%Z'"
+                )
         _connection.commit()
     return _connection
 

@@ -9,7 +9,7 @@ from ai_monitor.models import HookEvent
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _get_or_create_project(cwd: str) -> int:
@@ -30,10 +30,16 @@ def _get_or_create_project(cwd: str) -> int:
 def _ensure_session(event: HookEvent) -> None:
     """Auto-create a session row if one doesn't exist for this session_id."""
     db = get_db()
+    now = _now()
     row = db.execute(
         "SELECT id FROM sessions WHERE session_id = ?", (event.session_id,)
     ).fetchone()
     if row:
+        db.execute(
+            "UPDATE sessions SET last_event_at = ?, status = 'active', ended_at = NULL WHERE session_id = ?",
+            (now, event.session_id),
+        )
+        db.commit()
         return
 
     project_id = None
@@ -41,9 +47,9 @@ def _ensure_session(event: HookEvent) -> None:
         project_id = _get_or_create_project(event.cwd)
 
     db.execute(
-        """INSERT OR IGNORE INTO sessions (session_id, project_id, status, model, started_at)
-           VALUES (?, ?, 'active', ?, ?)""",
-        (event.session_id, project_id, event.model, _now()),
+        """INSERT OR IGNORE INTO sessions (session_id, project_id, status, model, started_at, last_event_at)
+           VALUES (?, ?, 'active', ?, ?, ?)""",
+        (event.session_id, project_id, event.model, now, now),
     )
     db.commit()
 
@@ -166,12 +172,11 @@ def _handle_post_tool_use_failure(event: HookEvent) -> None:
 
 
 def _handle_stop(event: HookEvent) -> None:
-    """Handle a Stop event — the model finished a turn, NOT session end."""
-    # Just touch the session to keep it marked active; don't end it.
+    """Handle a Stop event — update last activity timestamp."""
     db = get_db()
     db.execute(
-        "UPDATE sessions SET status = 'active' WHERE session_id = ?",
-        (event.session_id,),
+        "UPDATE sessions SET last_event_at = ? WHERE session_id = ?",
+        (_now(), event.session_id),
     )
     db.commit()
 
