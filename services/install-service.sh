@@ -6,6 +6,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_DIR="$PROJECT_DIR/logs"
 ACTION="${1:-install}"
+ENV_FILE="$PROJECT_DIR/.env"
+
+# Read port from .env (default 6821)
+PORT="6821"
+if [ -f "$ENV_FILE" ]; then
+    PORT=$(grep -E '^AI_MONITOR_PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '[:space:]')
+    PORT="${PORT:-6821}"
+fi
 
 mkdir -p "$LOG_DIR"
 
@@ -16,8 +24,8 @@ install_macos() {
     # Stop existing service if running
     launchctl bootout "gui/$(id -u)/com.ai-monitor" 2>/dev/null || true
 
-    # Template the plist with actual paths
-    sed "s|__INSTALL_DIR__|${PROJECT_DIR}|g" "$PLIST_SRC" > "$PLIST_DST"
+    # Template the plist with actual paths and port
+    sed -e "s|__INSTALL_DIR__|${PROJECT_DIR}|g" -e "s|__PORT__|${PORT}|g" "$PLIST_SRC" > "$PLIST_DST"
 
     # Load the service
     launchctl bootstrap "gui/$(id -u)" "$PLIST_DST"
@@ -45,8 +53,8 @@ install_linux() {
 
     mkdir -p "$HOME/.config/systemd/user"
 
-    # Template the service file with actual paths
-    sed "s|__INSTALL_DIR__|${PROJECT_DIR}|g" "$SERVICE_SRC" > "$SERVICE_DST"
+    # Template the service file with actual paths and port
+    sed -e "s|__INSTALL_DIR__|${PROJECT_DIR}|g" -e "s|__PORT__|${PORT}|g" "$SERVICE_SRC" > "$SERVICE_DST"
 
     # Reload and enable
     systemctl --user daemon-reload

@@ -7,11 +7,13 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>__INSTALL_DIR__/run.sh</string>
+        <string>__INSTALL_DIR__/backend/.venv/bin/python</string>
+        <string>-m</string>
+        <string>ai_monitor</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>__INSTALL_DIR__</string>
+    <string>__INSTALL_DIR__/backend</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -31,7 +33,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>AI_MONITOR_PORT</key>
-        <string>6820</string>
+        <string>__PORT__</string>
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
     </dict>

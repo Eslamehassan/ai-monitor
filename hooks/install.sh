@@ -49,57 +49,58 @@ done
 HOOKS_JSON+="]"
 
 # If settings file exists, merge hooks; otherwise create it
-if [ -f "$SETTINGS_FILE" ]; then
-    # Check if python3 is available for JSON manipulation
-    if command -v python3 &> /dev/null; then
-        python3 -c "
-import json, sys
+if command -v python3 &> /dev/null; then
+    python3 -c "
+import json, os
 
 settings_path = '$SETTINGS_FILE'
 hook_script = '$HOOK_SCRIPT'
-events = $( printf '%s\n' "${EVENTS[@]}" | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin]))" )
+events = ['PreToolUse', 'PostToolUse', 'Notification', 'SubagentStop', 'SubagentStart', 'Stop']
 
-with open(settings_path, 'r') as f:
-    settings = json.load(f)
+# Load or create settings
+if os.path.exists(settings_path):
+    with open(settings_path, 'r') as f:
+        settings = json.load(f)
+else:
+    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+    settings = {}
 
-existing_hooks = settings.get('hooks', [])
+hooks = settings.get('hooks', {})
 
-# Remove any existing ai-monitor hooks
-existing_hooks = [h for h in existing_hooks if not any(
-    hook.get('command', '').endswith('monitor-hook.sh')
-    for hook in h.get('hooks', [])
-)]
+# hooks is a dict keyed by event name, each value is a list of hook entries
+if isinstance(hooks, list):
+    hooks = {}  # reset if somehow in wrong format
 
-# Add new hooks
-for event in json.loads(events):
-    existing_hooks.append({
-        'matcher': event,
+for event in events:
+    event_hooks = hooks.get(event, [])
+
+    # Remove any existing ai-monitor hook entries
+    event_hooks = [
+        entry for entry in event_hooks
+        if not any(
+            h.get('command', '').endswith('monitor-hook.sh')
+            for h in (entry.get('hooks', []) if isinstance(entry, dict) else [])
+        )
+    ]
+
+    # Add ai-monitor hook
+    event_hooks.append({
         'hooks': [{'type': 'command', 'command': hook_script}]
     })
 
-settings['hooks'] = existing_hooks
+    hooks[event] = event_hooks
+
+settings['hooks'] = hooks
 
 with open(settings_path, 'w') as f:
     json.dump(settings, f, indent=2)
 
 print('Hooks installed successfully into', settings_path)
 "
-    else
-        echo "Error: python3 is required to safely merge hooks into existing settings."
-        echo "Please install Python 3 or manually add hooks to $SETTINGS_FILE"
-        exit 1
-    fi
 else
-    # Create new settings file with hooks
-    mkdir -p "$(dirname "$SETTINGS_FILE")"
-    echo "$HOOKS_JSON" | python3 -c "
-import json, sys
-hooks = json.load(sys.stdin)
-settings = {'hooks': hooks}
-with open('$SETTINGS_FILE', 'w') as f:
-    json.dump(settings, f, indent=2)
-print('Created', '$SETTINGS_FILE', 'with AI Monitor hooks')
-"
+    echo "Error: python3 is required to safely merge hooks into existing settings."
+    echo "Please install Python 3 or manually add hooks to $SETTINGS_FILE"
+    exit 1
 fi
 
 echo ""
