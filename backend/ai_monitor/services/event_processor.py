@@ -27,17 +27,41 @@ def _get_or_create_project(cwd: str) -> int:
     return cur.lastrowid
 
 
+def _ensure_session(event: HookEvent) -> None:
+    """Auto-create a session row if one doesn't exist for this session_id."""
+    db = get_db()
+    row = db.execute(
+        "SELECT id FROM sessions WHERE session_id = ?", (event.session_id,)
+    ).fetchone()
+    if row:
+        return
+
+    project_id = None
+    if event.cwd:
+        project_id = _get_or_create_project(event.cwd)
+
+    db.execute(
+        """INSERT OR IGNORE INTO sessions (session_id, project_id, status, model, started_at)
+           VALUES (?, ?, 'active', ?, ?)""",
+        (event.session_id, project_id, event.model, _now()),
+    )
+    db.commit()
+
+
 def process_event(event: HookEvent) -> None:
     """Route a hook event to the appropriate handler."""
+    # Always ensure the session exists before processing any event
+    _ensure_session(event)
+
     handlers = {
         "SessionStart": _handle_session_start,
         "SessionEnd": _handle_session_end,
-        "Stop": _handle_session_end,
         "PreToolUse": _handle_pre_tool_use,
         "PostToolUse": _handle_post_tool_use,
         "PostToolUseFailure": _handle_post_tool_use_failure,
         "SubagentStart": _handle_subagent_start,
         "SubagentStop": _handle_subagent_stop,
+        "Stop": _handle_stop,
     }
     handler = handlers.get(event.hook_event_name)
     if handler:
@@ -138,6 +162,17 @@ def _handle_post_tool_use_failure(event: HookEvent) -> None:
                VALUES (?, ?, 'error', ?, ?)""",
             (event.session_id, event.tool_name or "unknown", event.error, _now()),
         )
+    db.commit()
+
+
+def _handle_stop(event: HookEvent) -> None:
+    """Handle a Stop event — the model finished a turn, NOT session end."""
+    # Just touch the session to keep it marked active; don't end it.
+    db = get_db()
+    db.execute(
+        "UPDATE sessions SET status = 'active' WHERE session_id = ?",
+        (event.session_id,),
+    )
     db.commit()
 
 

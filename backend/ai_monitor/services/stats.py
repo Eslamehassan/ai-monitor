@@ -1,7 +1,14 @@
 """Aggregation queries for dashboard statistics."""
 
 from ai_monitor.db import get_db
-from ai_monitor.models import DashboardStats, Session, ToolStats
+from ai_monitor.models import (
+    DashboardStats,
+    Session,
+    SessionsOverTime,
+    TokensOverTime,
+    ToolCall,
+    ToolStats,
+)
 
 
 def get_dashboard_stats() -> DashboardStats:
@@ -67,6 +74,45 @@ def get_dashboard_stats() -> DashboardStats:
         Session(**{k: r[k] for k in r.keys()}) for r in recent_rows
     ]
 
+    # Sessions over time (last 30 days)
+    sessions_time_rows = db.execute(
+        """SELECT DATE(started_at) as date, COUNT(*) as count
+           FROM sessions
+           WHERE started_at >= DATE('now', '-30 days')
+           GROUP BY DATE(started_at)
+           ORDER BY date"""
+    ).fetchall()
+    sessions_over_time = [
+        SessionsOverTime(date=r["date"], count=r["count"])
+        for r in sessions_time_rows
+    ]
+
+    # Tokens over time (last 30 days)
+    tokens_time_rows = db.execute(
+        """SELECT DATE(started_at) as date,
+                  COALESCE(SUM(input_tokens), 0) as tokens_in,
+                  COALESCE(SUM(output_tokens), 0) as tokens_out
+           FROM sessions
+           WHERE started_at >= DATE('now', '-30 days')
+           GROUP BY DATE(started_at)
+           ORDER BY date"""
+    ).fetchall()
+    tokens_over_time = [
+        TokensOverTime(date=r["date"], tokens_in=r["tokens_in"], tokens_out=r["tokens_out"])
+        for r in tokens_time_rows
+    ]
+
+    # Recent errors (last 20 tool call errors)
+    error_rows = db.execute(
+        """SELECT * FROM tool_calls
+           WHERE status = 'error'
+           ORDER BY started_at DESC
+           LIMIT 20"""
+    ).fetchall()
+    recent_errors = [
+        ToolCall(**{k: r[k] for k in r.keys()}) for r in error_rows
+    ]
+
     return DashboardStats(
         total_sessions=total,
         active_sessions=active,
@@ -76,4 +122,7 @@ def get_dashboard_stats() -> DashboardStats:
         total_cost=round(totals["cost"], 4),
         tool_distribution=tool_distribution,
         recent_sessions=recent_sessions,
+        sessions_over_time=sessions_over_time,
+        tokens_over_time=tokens_over_time,
+        recent_errors=recent_errors,
     )

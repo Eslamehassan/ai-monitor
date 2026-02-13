@@ -107,6 +107,17 @@ class ToolStats(BaseModel):
     avg_duration_ms: float | None = None
 
 
+class SessionsOverTime(BaseModel):
+    date: str
+    count: int = 0
+
+
+class TokensOverTime(BaseModel):
+    date: str
+    tokens_in: int = 0
+    tokens_out: int = 0
+
+
 class DashboardStats(BaseModel):
     total_sessions: int = 0
     active_sessions: int = 0
@@ -116,8 +127,6 @@ class DashboardStats(BaseModel):
     total_cost: float = 0.0
     tool_distribution: list[ToolStats] = Field(default_factory=list)
     recent_sessions: list[Session] = Field(default_factory=list)
-
-
-class TimeSeriesPoint(BaseModel):
-    timestamp: str
-    value: float
+    sessions_over_time: list[SessionsOverTime] = Field(default_factory=list)
+    tokens_over_time: list[TokensOverTime] = Field(default_factory=list)
+    recent_errors: list[ToolCall] = Field(default_factory=list)

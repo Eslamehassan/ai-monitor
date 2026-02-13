@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from ai_monitor.config import settings
@@ -64,7 +65,13 @@ app.include_router(dashboard.router)
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
 static_dir = os.path.abspath(static_dir)
 if os.path.isdir(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+    # Serve static assets (JS, CSS, etc.)
+    app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets")
+
+    # SPA fallback: serve index.html for all non-API routes
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        return FileResponse(os.path.join(static_dir, "index.html"))
 
 
 if __name__ == "__main__":
