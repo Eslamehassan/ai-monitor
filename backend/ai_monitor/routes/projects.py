@@ -1,9 +1,10 @@
 """Project endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from ai_monitor.db import get_db
-from ai_monitor.models import Project
+from ai_monitor.models import Project, ProjectDetail
+from ai_monitor.services.stats import get_project_stats
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
@@ -36,3 +37,12 @@ async def list_projects() -> list[dict]:
         }
         for r in rows
     ]
+
+
+@router.get("/projects/{project_id}")
+async def get_project(project_id: int) -> ProjectDetail:
+    """Get project detail with aggregated stats."""
+    result = get_project_stats(project_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return result

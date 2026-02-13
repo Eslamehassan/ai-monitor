@@ -60,6 +60,7 @@ class Session(BaseModel):
     cache_write_tokens: int = 0
     estimated_cost: float = 0.0
     tool_call_count: int = 0
+    duration_seconds: float | None = None
 
 
 class ToolCall(BaseModel):
@@ -116,6 +117,28 @@ class TokensOverTime(BaseModel):
     date: str
     tokens_in: int = 0
     tokens_out: int = 0
+
+
+class TimelineEvent(BaseModel):
+    type: Literal["tool_call", "agent"]
+    timestamp: str | None = None
+    tool_call: ToolCall | None = None
+    agent: Agent | None = None
+
+
+class ProjectDetail(BaseModel):
+    id: int | None = None
+    name: str
+    path: str
+    created_at: str | None = None
+    session_count: int = 0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_cost: float = 0.0
+    last_active: str | None = None
+    tool_distribution: list[ToolStats] = Field(default_factory=list)
+    sessions_over_time: list[SessionsOverTime] = Field(default_factory=list)
+    tokens_over_time: list[TokensOverTime] = Field(default_factory=list)
 
 
 class DashboardStats(BaseModel):

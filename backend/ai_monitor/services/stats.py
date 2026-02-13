@@ -3,6 +3,7 @@
 from ai_monitor.db import get_db
 from ai_monitor.models import (
     DashboardStats,
+    ProjectDetail,
     Session,
     SessionsOverTime,
     TokensOverTime,
@@ -125,4 +126,104 @@ def get_dashboard_stats() -> DashboardStats:
         sessions_over_time=sessions_over_time,
         tokens_over_time=tokens_over_time,
         recent_errors=recent_errors,
+    )
+
+
+def get_project_stats(project_id: int) -> ProjectDetail | None:
+    """Compute aggregate statistics for a single project."""
+    db = get_db()
+
+    # Fetch project
+    project = db.execute(
+        "SELECT * FROM projects WHERE id = ?", (project_id,)
+    ).fetchone()
+    if not project:
+        return None
+
+    # Aggregated session stats
+    agg = db.execute(
+        """SELECT
+               COUNT(*) as session_count,
+               COALESCE(SUM(input_tokens), 0) as total_input_tokens,
+               COALESCE(SUM(output_tokens), 0) as total_output_tokens,
+               COALESCE(SUM(estimated_cost), 0) as total_cost,
+               MAX(started_at) as last_active
+           FROM sessions
+           WHERE project_id = ?""",
+        (project_id,),
+    ).fetchone()
+
+    # Tool distribution scoped to project's sessions
+    tool_rows = db.execute(
+        """SELECT
+               tc.tool_name,
+               COUNT(*) as count,
+               SUM(CASE WHEN tc.status = 'error' THEN 1 ELSE 0 END) as error_count,
+               AVG(tc.duration_ms) as avg_duration_ms
+           FROM tool_calls tc
+           JOIN sessions s ON tc.session_id = s.session_id
+           WHERE s.project_id = ?
+           GROUP BY tc.tool_name
+           ORDER BY count DESC
+           LIMIT 20""",
+        (project_id,),
+    ).fetchall()
+
+    tool_distribution = []
+    for r in tool_rows:
+        count = r["count"]
+        error_count = r["error_count"]
+        tool_distribution.append(
+            ToolStats(
+                tool_name=r["tool_name"],
+                count=count,
+                error_count=error_count,
+                error_rate=round(error_count / count, 4) if count > 0 else 0.0,
+                avg_duration_ms=round(r["avg_duration_ms"], 1) if r["avg_duration_ms"] else None,
+            )
+        )
+
+    # Sessions over time (last 30 days) scoped to project
+    sessions_time_rows = db.execute(
+        """SELECT DATE(started_at) as date, COUNT(*) as count
+           FROM sessions
+           WHERE project_id = ? AND started_at >= DATE('now', '-30 days')
+           GROUP BY DATE(started_at)
+           ORDER BY date""",
+        (project_id,),
+    ).fetchall()
+    sessions_over_time = [
+        SessionsOverTime(date=r["date"], count=r["count"])
+        for r in sessions_time_rows
+    ]
+
+    # Tokens over time (last 30 days) scoped to project
+    tokens_time_rows = db.execute(
+        """SELECT DATE(started_at) as date,
+                  COALESCE(SUM(input_tokens), 0) as tokens_in,
+                  COALESCE(SUM(output_tokens), 0) as tokens_out
+           FROM sessions
+           WHERE project_id = ? AND started_at >= DATE('now', '-30 days')
+           GROUP BY DATE(started_at)
+           ORDER BY date""",
+        (project_id,),
+    ).fetchall()
+    tokens_over_time = [
+        TokensOverTime(date=r["date"], tokens_in=r["tokens_in"], tokens_out=r["tokens_out"])
+        for r in tokens_time_rows
+    ]
+
+    return ProjectDetail(
+        id=project["id"],
+        name=project["name"],
+        path=project["path"],
+        created_at=project["created_at"],
+        session_count=agg["session_count"],
+        total_input_tokens=agg["total_input_tokens"],
+        total_output_tokens=agg["total_output_tokens"],
+        total_cost=round(agg["total_cost"], 4),
+        last_active=agg["last_active"],
+        tool_distribution=tool_distribution,
+        sessions_over_time=sessions_over_time,
+        tokens_over_time=tokens_over_time,
     )

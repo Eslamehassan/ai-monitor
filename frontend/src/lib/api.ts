@@ -25,6 +25,7 @@ export interface Session {
   cache_write_tokens: number;
   estimated_cost: number;
   tool_call_count: number;
+  duration_seconds: number | null;
 }
 
 export interface SessionDetail extends Session {
@@ -89,6 +90,28 @@ export interface DashboardStats {
   recent_errors: ToolCall[];
 }
 
+export interface TimelineEvent {
+  type: "tool_call" | "agent";
+  timestamp: string | null;
+  tool_call: ToolCall | null;
+  agent: Agent | null;
+}
+
+export interface ProjectDetail {
+  id: number | null;
+  name: string;
+  path: string;
+  created_at: string | null;
+  session_count: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cost: number;
+  last_active: string | null;
+  tool_distribution: ToolStats[];
+  sessions_over_time: { date: string; count: number }[];
+  tokens_over_time: { date: string; tokens_in: number; tokens_out: number }[];
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
@@ -98,17 +121,28 @@ export interface PaginatedResponse<T> {
 
 // ── Fetchers ────────────────────────────────────────────────────
 
-export async function fetchSessions(): Promise<Session[]> {
-  const res = await fetchJson<PaginatedResponse<Session>>("/sessions");
-  return res.items;
+export async function fetchSessions(params?: { search?: string; status?: string }): Promise<PaginatedResponse<Session>> {
+  const query = new URLSearchParams();
+  if (params?.search) query.set("search", params.search);
+  if (params?.status && params.status !== "all") query.set("status", params.status);
+  const qs = query.toString();
+  return fetchJson<PaginatedResponse<Session>>(`/sessions${qs ? `?${qs}` : ""}`);
 }
 
 export async function fetchSession(id: string): Promise<SessionDetail> {
   return fetchJson<SessionDetail>(`/sessions/${id}`);
 }
 
+export async function fetchTimeline(sessionId: string): Promise<TimelineEvent[]> {
+  return fetchJson<TimelineEvent[]>(`/sessions/${sessionId}/timeline`);
+}
+
 export async function fetchProjects(): Promise<Project[]> {
   return fetchJson<Project[]>("/projects");
+}
+
+export async function fetchProject(id: number): Promise<ProjectDetail> {
+  return fetchJson<ProjectDetail>(`/projects/${id}`);
 }
 
 export async function fetchToolStats(): Promise<ToolStats[]> {

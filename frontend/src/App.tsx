@@ -4,6 +4,7 @@ import { Header } from "./components/layout/Header.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import Sessions from "./pages/Sessions.tsx";
 import Projects from "./pages/Projects.tsx";
+import ProjectDetailPage from "./pages/ProjectDetail.tsx";
 import { useAutoRefresh } from "./hooks/useAutoRefresh.ts";
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="/sessions" element={<Sessions />} />
             <Route path="/sessions/:id" element={<Sessions />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import {
@@ -8,20 +9,21 @@ import {
 } from "@/components/ui/card.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
-import { Separator } from "@/components/ui/separator.tsx";
 import {
   ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  Clock,
   Zap,
+  Search,
 } from "lucide-react";
-import type { SessionDetail as SessionDetailType } from "@/lib/api.ts";
+import type { SessionDetail as SessionDetailType, TimelineEvent } from "@/lib/api.ts";
+import { fetchTimeline } from "@/lib/api.ts";
 import {
   formatTokens,
   formatCost,
   relativeTime,
+  formatDuration,
 } from "@/lib/utils.ts";
+import { usePollingData } from "@/hooks/useAutoRefresh.ts";
+import { TimelineItem } from "./TimelineItem.tsx";
 
 interface Props {
   session: SessionDetailType;
@@ -29,6 +31,31 @@ interface Props {
 }
 
 export function SessionDetail({ session, onBack }: Props) {
+  const [timelineFilter, setTimelineFilter] = useState("");
+
+  const { data: timeline } = usePollingData<TimelineEvent[]>(
+    () => fetchTimeline(session.session_id),
+    [session.session_id]
+  );
+
+  const filteredTimeline = useMemo(() => {
+    if (!timeline) return [];
+    if (!timelineFilter) return timeline;
+    const q = timelineFilter.toLowerCase();
+    return timeline.filter((ev) => {
+      if (ev.type === "tool_call" && ev.tool_call) {
+        return ev.tool_call.tool_name.toLowerCase().includes(q);
+      }
+      if (ev.type === "agent" && ev.agent) {
+        return (
+          (ev.agent.agent_name ?? "").toLowerCase().includes(q) ||
+          (ev.agent.agent_type ?? "").toLowerCase().includes(q)
+        );
+      }
+      return false;
+    });
+  }, [timeline, timelineFilter]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -54,6 +81,9 @@ export function SessionDetail({ session, onBack }: Props) {
           <p className="text-xs text-muted-foreground">
             {session.project_name ?? "Unknown"} &middot; {session.model ?? "-"} &middot;{" "}
             {relativeTime(session.started_at)}
+            {session.duration_seconds != null && (
+              <> &middot; {formatDuration(session.duration_seconds)}</>
+            )}
           </p>
         </div>
       </div>
@@ -79,51 +109,37 @@ export function SessionDetail({ session, onBack }: Props) {
 
         <TabsContent value="timeline">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">
-                Tool Calls ({session.tool_calls?.length ?? 0})
+                Timeline ({filteredTimeline.length})
               </CardTitle>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Filter tools..."
+                  value={timelineFilter}
+                  onChange={(e) => setTimelineFilter(e.target.value)}
+                  className="h-8 w-[180px] rounded-md border border-input bg-transparent pl-8 pr-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px]">
-                {(!session.tool_calls || session.tool_calls.length === 0) ? (
+              <ScrollArea className="h-[500px]">
+                {filteredTimeline.length === 0 ? (
                   <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                    No tool calls recorded
+                    {timeline && timeline.length > 0
+                      ? "No matching events"
+                      : "No timeline events recorded"}
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    {session.tool_calls.map((tc, i) => (
-                      <div key={tc.id ?? i}>
-                        <div className="flex items-center gap-3 py-2 px-2 rounded hover:bg-muted/30">
-                          {tc.status !== "error" ? (
-                            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                          ) : (
-                            <XCircle className="h-4 w-4 shrink-0 text-red-500" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-mono font-medium">
-                              {tc.tool_name}
-                            </p>
-                            {tc.error && (
-                              <p className="mt-0.5 text-[11px] text-red-400 truncate">
-                                {tc.error}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {tc.duration_ms != null && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {tc.duration_ms}ms
-                              </span>
-                            )}
-                            <span>{relativeTime(tc.started_at)}</span>
-                          </div>
-                        </div>
-                        {i < session.tool_calls.length - 1 && (
-                          <Separator className="opacity-30" />
-                        )}
-                      </div>
+                  <div className="space-y-0">
+                    {filteredTimeline.map((ev, i) => (
+                      <TimelineItem
+                        key={i}
+                        event={ev}
+                        isLast={i === filteredTimeline.length - 1}
+                      />
                     ))}
                   </div>
                 )}

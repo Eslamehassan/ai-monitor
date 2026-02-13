@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
+import { Search } from "lucide-react";
 import type { Session } from "@/lib/api.ts";
 import {
   formatDuration,
@@ -38,6 +39,8 @@ interface Props {
   sessions: Session[];
   loading: boolean;
   onSelect: (session: Session) => void;
+  search?: string;
+  onSearch?: (query: string) => void;
 }
 
 const columns: ColumnDef<Session>[] = [
@@ -47,21 +50,29 @@ const columns: ColumnDef<Session>[] = [
     cell: ({ getValue }) => {
       const status = getValue<string>();
       return (
-        <Badge
-          variant={
-            status === "active"
-              ? "default"
-              : status === "error"
-                ? "destructive"
-                : "secondary"
-          }
-          className="text-[10px]"
-        >
-          {status}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {status === "active" && (
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+          )}
+          <Badge
+            variant={
+              status === "active"
+                ? "default"
+                : status === "error"
+                  ? "destructive"
+                  : "secondary"
+            }
+            className="text-[10px]"
+          >
+            {status}
+          </Badge>
+        </div>
       );
     },
-    size: 90,
+    size: 100,
   },
   {
     accessorKey: "session_id",
@@ -83,6 +94,28 @@ const columns: ColumnDef<Session>[] = [
     cell: ({ getValue }) => (
       <span className="text-xs text-muted-foreground">{getValue<string>()}</span>
     ),
+  },
+  {
+    accessorKey: "duration_seconds",
+    header: "Duration",
+    cell: ({ getValue }) => (
+      <span className="text-xs text-muted-foreground">
+        {formatDuration(getValue<number | null>())}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "tool_call_count",
+    header: "Tools",
+    cell: ({ getValue }) => {
+      const count = getValue<number>();
+      return (
+        <Badge variant="outline" className="text-[10px] font-mono">
+          {count}
+        </Badge>
+      );
+    },
+    size: 70,
   },
   {
     id: "tokens",
@@ -110,7 +143,7 @@ const columns: ColumnDef<Session>[] = [
   },
 ];
 
-export function SessionList({ sessions, loading, onSelect }: Props) {
+export function SessionList({ sessions, loading, onSelect, search, onSearch }: Props) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "started_at", desc: true },
   ]);
@@ -133,19 +166,33 @@ export function SessionList({ sessions, loading, onSelect }: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle className="text-sm font-medium">All Sessions</CardTitle>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px] h-8 text-xs">
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="error">Error</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {onSearch && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search sessions..."
+                value={search ?? ""}
+                onChange={(e) => onSearch(e.target.value)}
+                className="h-8 w-[180px] rounded-md border border-input bg-transparent pl-8 pr-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="error">Error</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (

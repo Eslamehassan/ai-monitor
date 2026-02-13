@@ -1,4 +1,4 @@
-Start the AI Monitor server. Ensures all packages are installed, rebuilds the frontend, and deploys as a background service.
+First-time setup: install all dependencies, configure Claude Code hooks, build frontend, and deploy AI Monitor as a background service.
 
 ## Environment
 
@@ -15,21 +15,26 @@ PORT="${PORT:-6821}"
 
 ## Steps
 
-1. Ensure backend dependencies are installed:
+1. Install backend dependencies:
 ```bash
 cd "$PROJECT_DIR/backend"
 if [ ! -d ".venv" ]; then uv venv --python python3.13; fi
 uv pip install -e ".[dev]"
 ```
 
-2. Ensure frontend dependencies are installed and rebuild:
+2. Install frontend dependencies and build:
 ```bash
 cd "$PROJECT_DIR/frontend"
 bun install
 bun run build
 ```
 
-3. Detect the OS and install/start as a background service:
+3. Install Claude Code hooks into the user's `~/.claude/settings.json`:
+```bash
+"$PROJECT_DIR/hooks/install.sh"
+```
+
+4. Detect the OS and install as a background service:
 
 **macOS / Linux:**
 ```bash
@@ -41,9 +46,11 @@ bun run build
 powershell -ExecutionPolicy Bypass -File services\windows\install-service.ps1 -Action install
 ```
 
-4. Verify the server is running:
+5. Verify the server is running:
 ```bash
 curl -s "http://localhost:${PORT}/api/health"
 ```
 
-5. Tell the user the dashboard is available at `http://localhost:${PORT}`
+6. Tell the user:
+   - Dashboard is available at `http://localhost:${PORT}`
+   - Claude Code hooks have been installed — restart Claude Code for hooks to take effect

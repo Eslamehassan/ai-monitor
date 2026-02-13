@@ -37,7 +37,11 @@ export default function Dashboard() {
     fetchToolStats,
     []
   );
-  const { data: sessions } = usePollingData<Session[]>(fetchSessions, []);
+  const { data: sessionsRes } = usePollingData<{ items: Session[] }>(
+    () => fetchSessions(),
+    []
+  );
+  const sessions = sessionsRes?.items ?? null;
 
   const s = stats ?? emptyStats;
 

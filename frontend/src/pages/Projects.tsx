@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -11,6 +12,7 @@ import type { Project } from "@/lib/api.ts";
 import { formatCost, formatTokens, relativeTime } from "@/lib/utils.ts";
 
 export default function Projects() {
+  const navigate = useNavigate();
   const { data: projects, loading } = usePollingData<Project[]>(
     fetchProjects,
     []
@@ -35,15 +37,22 @@ export default function Projects() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {projects.map((project) => (
-        <ProjectCard key={project.id ?? project.name} project={project} />
+        <ProjectCard
+          key={project.id ?? project.name}
+          project={project}
+          onClick={() => project.id != null && navigate(`/projects/${project.id}`)}
+        />
       ))}
     </div>
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
   return (
-    <Card className="transition-colors hover:border-primary/30">
+    <Card
+      className="cursor-pointer transition-colors hover:border-primary/30"
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
           <FolderKanban className="h-4 w-4 text-primary" />
